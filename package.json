@@ -1,19 +1,17 @@
 {
-  "name": "npmgraph",
-  "version": "2.9.1",
+  "name": "dependency_guard",
+  "version": "0.1.0",
   "type": "module",
   "author": {
-    "name": "Robert Kieffer",
-    "url": "http://github.com/broofa",
-    "email": "robert@broofa.com"
+    "name": "Chritch",
+    "url": "http://github.com/Zerokei",
+    "email": "chritch-7@outlook.com"
   },
-  "license": "MIT",
+  "license": "GPL-3.0",
   "browserslist": [
     "last 2 versions"
   ],
   "funding": [
-    "https://github.com/sponsors/broofa",
-    "https://github.com/sponsors/fregante"
   ],
   "dependencies": {
     "@hpcc-js/wasm": "1.14.1",
@@ -38,7 +36,7 @@
     "module"
   ],
   "repository": {
-    "url": "https://github.com/npmgraph/npmgraph.git",
+    "url": "https://github.com/Zerokei/DepGuard.git",
     "type": "git"
   },
   "devDependencies": {
