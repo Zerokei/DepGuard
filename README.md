@@ -1,8 +1,6 @@
-# npmgraph
+# DepGuard 
 
 A tool for exploring npm modules and dependencies.
-
-**Available online at https://npmgraph.js.org/.**
 
 ## Running locally
 
