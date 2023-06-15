@@ -1,8 +1,8 @@
-<div >
+<div style="align-content: center">
 
-<h3> DepGuard </h3>
+<h3 style="text-align: center"> DepGuard </h3>
 
-  <p >
+  <p style="text-align: center">
     A tool for exploring npm modules and dependencies.
     <br />
     <br />
