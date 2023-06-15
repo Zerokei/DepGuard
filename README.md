@@ -1,8 +1,18 @@
-# DepGuard 
+<div align="center">
 
-A tool for exploring npm modules and dependencies.
+<h3 align="center"> DepGuard </h3>
 
-## Running locally
+  <p align="center">
+    A tool for exploring npm modules and dependencies.
+    <br />
+    <br />
+    <a href="https://github.com/Zerokei/DepGuard/issue">Report Bug</a>
+    ·
+    <a href="https://github.com/Zerokei/DepGuard/issue">Request Feature</a>
+  </p>
+</div>
+
+## Getting Started
 
 ### Install
 
