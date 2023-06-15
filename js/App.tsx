@@ -63,11 +63,14 @@ export default function App() {
   return (
     <>
       {activity.total > 0 ? <Loader activity={activity} /> : null}
+      {/* 依赖图 */}
       <Graph />
+      {/* 侧栏按钮 */}
       <Splitter
         isOpen={inspectorOpen}
         onClick={() => setInspectorOpen(!inspectorOpen)}
       />
+      {/* 侧栏 */}
       <Inspector className={inspectorOpen ? 'open' : ''} />
     </>
   );
