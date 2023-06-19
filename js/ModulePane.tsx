@@ -3,7 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { ExternalLink, Pane, QueryLink, Section, Tag, Tags } from './Inspector';
 import { npmsioResponse } from './types';
 import { $, fetchJSON, human, simplur } from './util';
+import * as semver from 'semver';
 import '/css/ModulePane.scss';
+import axios from 'axios';
+import cheerio from 'cheerio';
 
 function ScoreBar({ title, score, style }) {
   const perc = (score * 100).toFixed(0) + '%';
@@ -31,6 +34,30 @@ function ScoreBar({ title, score, style }) {
       </div>
     </>
   );
+}
+
+
+// ref: https://github.com/abbasjavan/DependencySniffer/blob/master/DepSniffer.py
+function getDependencyType(version: string): string | null {
+
+  if (!version) {
+    return null;
+  }
+  else if (version.includes('~')) {
+    return 'restrictive'; // 限制版本号类型
+  } else if (version.includes('*')
+          || version.includes('>')
+          || version.includes('latest')){
+    return 'permissive'; // 宽松版本号类型
+  }
+  else if (semver.valid(version)) {
+    return 'exact'; // 精确版本号类型
+  } else if (version.includes('http')
+          || version.includes('git')) {
+    return 'url'; // url 类型
+  } else {
+    return 'normal';
+  }
 }
 
 function TreeMap({ data, style, ...props }) {
@@ -110,17 +137,48 @@ function TreeMap({ data, style, ...props }) {
   );
 }
 
+
+async function searchPackageJsonField(link) {
+ // TODO: 获取 tarball，并检验其是否包含 package.json
+  // TODO: 如果可以的话，尝试使用 depcheck 进行依赖检测
+  try {
+    const response = await axios({
+      url: link,
+    });
+    const html = response.data;
+    const hasPackageJson = html.includes('package.json');
+    return hasPackageJson;
+  } catch (error) {
+    console.error('Error:', error.message);
+    return false;
+  }
+}
+
+
 export default function ModulePane({ module, ...props }) {
   const pkg = module?.package;
 
   const [bundleInfo, setBundleInfo] = useState(null);
   const [npmsInfo, setNpmsInfo] = useState(null);
+  const [packageInfo, setPackageInfo] = useState(null);
+  const [smells, setSmells] = useState({});
 
   const pn = pkg ? encodeURIComponent(`${pkg.name}@${pkg.version}`) : null;
 
   useEffect(() => {
     setBundleInfo(pkg ? null : Error('No package selected'));
     setNpmsInfo(null);
+    setPackageInfo(null);
+    setSmells({
+      'pinned-dependency': 0,
+      'url-dependency': 0,
+      'restrictive-constraint': 0,
+      'permissive-constraint': 0,
+      'no-package-lock': 0,
+      'unused-dependency': 'N/A',
+      'missing-dependency': 'N/A',
+      'score': 1,
+    });
 
     if (!pkg) return;
 
@@ -131,7 +189,74 @@ export default function ModulePane({ module, ...props }) {
     fetchJSON<npmsioResponse>(`https://api.npms.io/v2/package/${pkg.name}`)
       .then(search => setNpmsInfo(search.score))
       .catch(setNpmsInfo);
+
+    fetchJSON<npmsioResponse>(module.apiLink)
+      .then(data => {
+        console.log(data)
+        setPackageInfo(data);
+
+        const tempSmell = {
+          'pinned-dependency': 0,
+          'url-dependency': 0,
+          'restrictive-constraint': 0,
+          'permissive-constraint': 0,
+          'no-package-lock': 0,
+          'unused-dependency': 'N/A',
+          'missing-dependency': 'N/A',
+          'score': 1,
+        };
+        // 遍历 pkg.dependencies
+        const dependencies = data['dependencies'];
+        for (const depPkg in dependencies) {
+          const dependencyType = getDependencyType(dependencies[depPkg]);
+          switch (dependencyType) {
+            case 'permissive':
+              tempSmell['permissive-constraint'] += 1;
+            break;
+            case 'restrictive':
+              tempSmell['restrictive-constraint'] += 1;
+            break;
+            case 'exact':
+              tempSmell['pinned-dependency'] += 1;
+              break;
+            case 'url':
+              tempSmell['url-dependency'] += 1;
+              break;
+            default:
+              break;
+          }
+        }
+        const dependencyCount = Object.keys(dependencies || []).length;
+
+        const fileTreeLink = module.npmLink + '/index'; //'?activeTab=code';
+        searchPackageJsonField(fileTreeLink).then(hasPackageJson => {
+          console.log(tempSmell['pinned-dependency'], dependencyCount)
+          if (tempSmell['pinned-dependency'] === dependencyCount) { // 所有包的版本都已经锁定，所以不需要 package-lock.json
+            tempSmell['no-package-lock'] = 0;
+          } else if (dependencyCount === 0) { // 没有依赖包，所以不需要 package-lock.json
+            tempSmell['no-package-lock'] = 0;
+          } else {
+            tempSmell['no-package-lock'] = hasPackageJson ? 0 : 1;
+          }
+
+          if (dependencyCount === 0) {
+            tempSmell['score'] = 0.1 * (tempSmell['no-package-lock'] === 1 ? 0 : 1) + 0.9
+          } else {
+            tempSmell['score'] =
+              (dependencyCount - tempSmell['pinned-dependency'] * 0.8 - tempSmell['url-dependency']
+                - tempSmell['restrictive-constraint'] * 0.6 - tempSmell['permissive-constraint'] * 0.6)
+              / dependencyCount * 0.9 + 0.1 * (tempSmell['no-package-lock'] === 1 ? 0 : 1)
+          }
+          setSmells(tempSmell);
+        });
+
+      })
+      .catch(setPackageInfo);
+
+
   }, [pkg]);
+  // console.log(smells);
+
 
   if (!pkg) {
     return (
@@ -160,6 +285,7 @@ export default function ModulePane({ module, ...props }) {
   if (npmsInfo) scores.final = npmsInfo.final;
 
   function BundleStats({ bundleInfo }) {
+
     return (
       <div
         style={{
@@ -273,7 +399,32 @@ export default function ModulePane({ module, ...props }) {
           </div>
         )}
       </Section>
+      <Section title={"Dependency Smells"}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto 1fr',
+            gap: '.3em 1em',
+          }}
+        >
+          <ScoreBar
+            style={{ fontWeight: 'bold' }}
+            title="Dependency Quality"
+            score={ smells['score'] }
+          />
+          <span>Pinned dependency:</span>
+          <strong>{smells['pinned-dependency']}</strong>
+          <span>URL dependency:</span>
+          <strong>{smells['url-dependency']}</strong>
+          <span>Restrictive constraint:</span>
+          <strong>{smells['restrictive-constraint']}</strong>
+          <span>Permissive constraint:</span>
+          <strong>{smells['permissive-constraint']}</strong>
+          <span>No package lock:</span>
+          <strong>{smells['no-package-lock']}</strong>
+        </div>
 
+      </Section>
       <Section
         title={simplur`${
           Object.entries(pkg?.maintainers).length

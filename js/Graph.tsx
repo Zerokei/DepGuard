@@ -355,7 +355,7 @@ function colorizeGraph(svg: SVGSVGElement, colorize: string) {
       );
       packageNames = packageNames.slice(MAX_PACKAGES);
     }
-
+    // TODO: 调用 module.apiLink 获取 config.json 内容，并对 dependency 进行分析
     Promise.all(reqs)
       .then(arrs => arrs.filter(a => a).reduce((a, b) => ({ ...a, ...b }), {}))
       .then(res => {
