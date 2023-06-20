@@ -5,8 +5,6 @@ import { npmsioResponse } from './types';
 import { $, fetchJSON, human, simplur } from './util';
 import * as semver from 'semver';
 import '/css/ModulePane.scss';
-import axios from 'axios';
-import cheerio from 'cheerio';
 
 function ScoreBar({ title, score, style }) {
   const perc = (score * 100).toFixed(0) + '%';
@@ -139,19 +137,15 @@ function TreeMap({ data, style, ...props }) {
 
 
 async function searchPackageJsonField(link) {
- // TODO: 获取 tarball，并检验其是否包含 package.json
-  // TODO: 如果可以的话，尝试使用 depcheck 进行依赖检测
-  try {
-    const response = await axios({
-      url: link,
-    });
-    const html = response.data;
-    const hasPackageJson = html.includes('package.json');
-    return hasPackageJson;
-  } catch (error) {
-    console.error('Error:', error.message);
-    return false;
-  }
+  return await new Promise((resolve) =>
+    fetch(link).then(res => {
+      if (res.ok) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    })
+  )
 }
 
 
@@ -228,7 +222,8 @@ export default function ModulePane({ module, ...props }) {
         }
         const dependencyCount = Object.keys(dependencies || []).length;
 
-        const fileTreeLink = module.npmLink + '/index'; //'?activeTab=code';
+        // const fileTreeLink = module.npmLink + '/index';
+        const fileTreeLink = 'https://unpkg.com/:package@:version/:file';
         searchPackageJsonField(fileTreeLink).then(hasPackageJson => {
           console.log(tempSmell['pinned-dependency'], dependencyCount)
           if (tempSmell['pinned-dependency'] === dependencyCount) { // 所有包的版本都已经锁定，所以不需要 package-lock.json
