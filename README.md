@@ -55,4 +55,5 @@ Distributed under the GPL-3.0 License. See LICENSE.txt for more information.
 
 ## Acknowledgments
 
-- [npmgraph: on which our project is based.](https://github.com/npmgraph/npmgraph)
+- [npmgraph](https://github.com/npmgraph/npmgraph): on which our project is based.
+- [DependencySniffer](https://github.com/abbasjavan/DependencySniffer): a line tool analyze your Javascript dependencies and notify you of potential dependency smells.

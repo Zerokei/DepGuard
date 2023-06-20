@@ -2,11 +2,12 @@ import filterAlteredClicks from 'filter-altered-clicks';
 import md5 from 'md5';
 import React, { HTMLAttributes } from 'react';
 import { version as VERSION } from '../package.json';
-import { useGraph, useModule, usePane, useQuery } from './App';
+import { useGraph, useModule, usePane, useQuery, useHistory } from './App';
 import { selectTag } from './Graph';
 import GraphPane from './GraphPane';
 import InfoPane from './InfoPane';
 import ModulePane from './ModulePane';
+import HistoryPane from "./HistoryPane";
 import { tagify } from './util';
 import '/css/Inspector.scss';
 
@@ -142,6 +143,7 @@ export default function Inspector(props) {
   const [pane, setPane] = usePane();
   const [module] = useModule();
   const [graph] = useGraph();
+  const [myHistory] = useHistory();
 
   let paneComponent;
   switch (pane) {
@@ -150,6 +152,9 @@ export default function Inspector(props) {
       break;
     case 'graph':
       paneComponent = <GraphPane id="pane-graph" graph={graph} />;
+      break;
+    case 'history':
+      paneComponent = <HistoryPane id="pane-history" history={myHistory} />;
       break;
     case 'info':
       paneComponent = <InfoPane id="pane-info" />;
@@ -183,6 +188,9 @@ export default function Inspector(props) {
         </Tab>
         <Tab active={pane == 'graph'} onClick={() => setPane('graph')}>
           Graph
+        </Tab>
+        <Tab active={pane == 'history'} onClick={() => setPane('history')}>
+          History
         </Tab>
         <Tab active={pane == 'info'} onClick={() => setPane('info')}>
           {'\u{24d8}'}
