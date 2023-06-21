@@ -39,7 +39,7 @@ const EDGE_ATTRIBUTES = {
   // optionalDevDependencies: '[color=red style=dashed]'
 };
 
-function getDependencyEntries(pkg, includeDev, level = 0) {
+export function getDependencyEntries(pkg, includeDev, level = 0) {
   const dependencyTypes = [
     'dependencies',
     'peerDependencies',
@@ -495,6 +495,7 @@ export default function Graph() {
     setModule([]);
 
     modulesForQuery(query, includeDev, moduleFilter).then(newGraph => {
+      console.log("wow", query, includeDev, moduleFilter)
       if (signal.aborted) return; // Check after async
 
       setGraph(newGraph);

@@ -150,7 +150,6 @@ async function searchPackageJsonField(link) {
 
 
 export default function ModulePane({ module, ...props }) {
-  console.log(module);
   const pkg = module?.package;
 
   const [bundleInfo, setBundleInfo] = useState(null);
