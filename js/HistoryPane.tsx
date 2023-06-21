@@ -26,6 +26,21 @@ const defaultData = {
   ],
 }
 
+const dateOption = {
+  scales: {
+    x: {
+      type: 'time',
+        time: {
+        unit: 'day',
+          tooltipFormat: 'YYYY',
+          displayFormats: {
+          day: 'YYYY-MM-DD'
+        }
+      }
+    }
+  }
+}
+
 async function modulesForQuery(query, includeDev, moduleFilter) {
   const graphState: GraphState = {
     modules: new Map(),
@@ -101,6 +116,7 @@ export default function HistoryPane({ graph: graph, ...props }) {
   const pkgName = pkg?pkg[1].module.package.name:'';
   const [historyData, setHistoryData] = useState(defaultData);
   const [developData, setDevelopData] = useState(defaultData);
+  const [dependencyData, setDependencyData] = useState(defaultData);
   const [excludes, setExcludes] = useExcludes();
   function moduleFilter({ name }) {
     return !excludes?.includes(name);
@@ -121,35 +137,81 @@ export default function HistoryPane({ graph: graph, ...props }) {
           modulesForQuery(
             `${pkgName}@${version}`, false, moduleFilter,
           ).then(modules => {
+            // console.log(typeof modules.modules.entries().next().value[1].module.package.dependencies)
             let maintainers = [];
             let packages = [];
+
             for (const [name, pkgContent] of modules.modules.entries()) {
               for (const maintainer of pkgContent.module.package.maintainers) {
                 maintainers.push(maintainer)
               }
               packages.push(`${pkgContent.module.name}@${pkgContent.module.version}`)
             }
-            maintainers = removeDuplicate(maintainers)
-            packages = Array.from(new Set(packages))
-            console.log(packages, packages.length)
-            infoList.push({time: fullDate, maintainerCount: maintainers.length, packageCount: packages.length});
+
+            const totalDependency = Array.from(new Set(packages))
+            const totalMaintainers = removeDuplicate(maintainers)
+
+            const directDependencies = modules.modules.entries().next().value[1].module.package.dependencies;
+            const directMaintainers = modules.modules.entries().next().value[1].module.package.maintainers;
+            const directDependencyCount = directDependencies ? Object.keys(directDependencies).length : 0;
+            const directMaintainerCount = directMaintainers ? Object.keys(directMaintainers).length : 0;
+
+            const totalDependencyCount = totalDependency.length;
+            const totalMaintainerCount = totalMaintainers.length;
+            const implicitDependencyCount = totalDependencyCount - directDependencyCount;
+            const implicitMaintainerCount = totalMaintainerCount - directMaintainerCount;
+
+            infoList.push({
+              time: fullDate,
+              implicitMaintainerCount: implicitMaintainerCount,
+              directDependencyCount: directDependencyCount,
+              implicitDependencyCount: implicitDependencyCount,
+              totalDependencyCount: totalDependencyCount,
+            });
             infoList.sort(function(a, b) {
               const timeA = new Date(a.time);
               const timeB = new Date(b.time);
               return (timeA < timeB) ? -1 : 1;
             })
+            setDependencyData({
+              labels: infoList.map(function(element) {
+                return element.time;
+              }),
+              datasets: [
+                {
+                  label: "Direct Dependencies",
+                  backgroundColor: "rgb(100, 100, 200)",
+                  borderColor: "rgb(100, 100, 200)",
+                  data: infoList.map(function(element) {
+                    return element.directDependencyCount;
+                  }),
+                  pointRadius: 0,
+                  cubicInterpolationMode: 'monotone',
+                },
+                {
+                  label: "Transitive Dependencies",
+                  backgroundColor: "rgb(100, 100, 100)",
+                  borderColor: "rgb(100, 100, 100)",
+                  data: infoList.map(function(element) {
+                    return element.implicitDependencyCount;
+                  }),
+                  pointRadius: 0,
+                  cubicInterpolationMode: 'monotone',
+                }
+              ],
+              options: dateOption,
+            })
             setDevelopData({
               labels: infoList.map(function(element) {
                 return element.time;
               }),
-
               datasets: [
                 {
                   label: "Implicit Trusted Maintainer",
                   backgroundColor: "rgb(100, 100, 200)",
                   borderColor: "rgb(100, 100, 200)",
                   data: infoList.map(function(element) {
-                    return element.maintainerCount;
+                    return element.implicitMaintainerCount;
                   }),
                   pointRadius: 0,
                   cubicInterpolationMode: 'monotone',
@@ -159,28 +221,16 @@ export default function HistoryPane({ graph: graph, ...props }) {
                   backgroundColor: "rgb(100, 100, 100)",
                   borderColor: "rgb(100, 100, 100)",
                   data: infoList.map(function(element) {
-                    return element.packageCount;
+                    return element.implicitDependencyCount;
                   }),
                   pointRadius: 0,
                   cubicInterpolationMode: 'monotone',
                 }
               ],
-              options: {
-                scales: {
-                  x: {
-                    type: 'time',
-                    time: {
-                      unit: 'day',
-                      tooltipFormat: 'YYYY',
-                      displayFormats: {
-                        day: 'YYYY-MM-DD'
-                      }
-                    }
-                  }
-                }
-              }
+              options: dateOption,
             })
           })
+
           historyList[year] = historyList[year] ? historyList[year] + 1 : 1;
         }
         setHistoryData({
@@ -200,19 +250,6 @@ export default function HistoryPane({ graph: graph, ...props }) {
   }, [pkgName]);
 
   Chart.register(...registerables);
-  // const labels = ["January", "February", "March", "April", "May", "June", "July",
-  //                 "August", "September", "October", "Novenber", "December"];
-  // const data = {
-  //   labels: labels,
-  //   datasets: [
-  //     {
-  //       label: "My First dataset",
-  //       backgroundColor: "rgb(255, 99, 132)",
-  //       borderColor: "rgb(255, 99, 132)",
-  //       data: [0, 10, 5, 2, 20, 30, 45],
-  //     },
-  //   ],
-  // };
 
   return (
     <Pane {...props}>
@@ -234,7 +271,20 @@ export default function HistoryPane({ graph: graph, ...props }) {
           (Shift-click modules in graph to expand/collapse)
         </div>
       </Section>
-      <Section title='Develop Information'>
+
+      <Section title='Dependences'>
+        <Line data={ dependencyData }
+        />
+        <div
+          style={{
+            fontSize: '90%',
+            color: 'var(--text-dim)',
+            marginTop: '1em',
+          }}
+        ></div>
+      </Section>
+
+      <Section title='Implicit Trust Information'>
         <Line data={ developData }
         />
         <div
