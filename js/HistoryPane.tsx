@@ -100,7 +100,7 @@ export default function HistoryPane({ graph: graph, ...props }) {
   const pkg = graph?.modules.entries().next().value;
   const pkgName = pkg?pkg[1].module.package.name:'';
   const [historyData, setHistoryData] = useState(defaultData);
-  const [maintainerData, setMaintainerData] = useState(defaultData);
+  const [developData, setDevelopData] = useState(defaultData);
   const [excludes, setExcludes] = useExcludes();
   function moduleFilter({ name }) {
     return !excludes?.includes(name);
@@ -112,7 +112,7 @@ export default function HistoryPane({ graph: graph, ...props }) {
         const timeJson = data['time']
         const timeKey = Object.keys(timeJson);
         let historyList = {};
-        let maintainerList = [];
+        let infoList = [];
         for (var i = 2; i < timeKey.length; i++) {
           const version = timeKey[i];
           const date = new Date(timeJson[version]);
@@ -122,21 +122,24 @@ export default function HistoryPane({ graph: graph, ...props }) {
             `${pkgName}@${version}`, false, moduleFilter,
           ).then(modules => {
             let maintainers = [];
+            let packages = [];
             for (const [name, pkgContent] of modules.modules.entries()) {
               for (const maintainer of pkgContent.module.package.maintainers) {
                 maintainers.push(maintainer)
               }
+              packages.push(`${pkgContent.module.name}@${pkgContent.module.version}`)
             }
             maintainers = removeDuplicate(maintainers)
-            maintainerList.push({time: fullDate, value: maintainers.length});
-            maintainerList.sort(function(a, b) {
+            packages = Array.from(new Set(packages))
+            console.log(packages, packages.length)
+            infoList.push({time: fullDate, maintainerCount: maintainers.length, packageCount: packages.length});
+            infoList.sort(function(a, b) {
               const timeA = new Date(a.time);
               const timeB = new Date(b.time);
               return (timeA < timeB) ? -1 : 1;
             })
-            console.log(maintainerList)
-            setMaintainerData({
-              labels: maintainerList.map(function(element) {
+            setDevelopData({
+              labels: infoList.map(function(element) {
                 return element.time;
               }),
 
@@ -145,8 +148,18 @@ export default function HistoryPane({ graph: graph, ...props }) {
                   label: "Implicit Trusted Maintainer",
                   backgroundColor: "rgb(100, 100, 200)",
                   borderColor: "rgb(100, 100, 200)",
-                  data: maintainerList.map(function(element) {
-                    return element.value;
+                  data: infoList.map(function(element) {
+                    return element.maintainerCount;
+                  }),
+                  pointRadius: 0,
+                  cubicInterpolationMode: 'monotone',
+                },
+                {
+                  label: "Implicit Trusted Package",
+                  backgroundColor: "rgb(100, 100, 100)",
+                  borderColor: "rgb(100, 100, 100)",
+                  data: infoList.map(function(element) {
+                    return element.packageCount;
                   }),
                   pointRadius: 0,
                   cubicInterpolationMode: 'monotone',
@@ -182,10 +195,6 @@ export default function HistoryPane({ graph: graph, ...props }) {
           ],
 
         });
-        console.log(historyList)
-        console.log(maintainerList)
-
-        // console.log(maintainerData.labels, maintainerData.datasets['data'])
 
       })
   }, [pkgName]);
@@ -226,7 +235,7 @@ export default function HistoryPane({ graph: graph, ...props }) {
         </div>
       </Section>
       <Section title='Develop Information'>
-        <Line data={ maintainerData }
+        <Line data={ developData }
         />
         <div
           style={{
