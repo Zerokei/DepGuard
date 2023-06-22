@@ -1,8 +1,10 @@
-<div style="align-content: center">
+<div align="center">
+  <a href="https://github.com/Zerokei/DepGuard">
+    <img src="images/favicon.png" alt="Logo" width="80" height="80">
+  </a>
+  <h3 align="center"> DepGuard </h3>
 
-<h3 style="text-align: center"> DepGuard </h3>
-
-  <p style="text-align: center">
+  <p align="center">
     A tool for exploring npm modules and dependencies.
     <br />
     <br />
