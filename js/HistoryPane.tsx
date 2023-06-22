@@ -49,21 +49,15 @@ async function modulesForQuery(query, includeDev, moduleFilter) {
 
   function _walk(module, level = 0) {
     if (!module) return Promise.resolve(Error('Undefined module'));
-
-    // Array?  Apply to each element
     if (Array.isArray(module)) {
       return Promise.all(module.map(m => _walk(m, level)));
     }
-
-    // Skip modules we've already seen
     if (graphState.modules.has(module.key)) return Promise.resolve();
 
-    // Get dependency [name, version, dependency type] entries
     const depEntries = moduleFilter(module)
       ? getDependencyEntries(module, includeDev, level)
       : [];
 
-    // Create object that captures info about how this module fits in the dependency graph
     const info: { module: ModuleInfo; level: number; dependencies?: object[] } =
       { module, level };
     graphState.modules.set(module.key, info);
@@ -72,7 +66,6 @@ async function modulesForQuery(query, includeDev, moduleFilter) {
       depEntries.map(async ([name, version, type]) => {
         const module = await store.getModule(name, version);
 
-        // Record the types of dependency references to this module
         if (!graphState.referenceTypes.has(module.key)) {
           graphState.referenceTypes.set(module.key, new Set());
         }

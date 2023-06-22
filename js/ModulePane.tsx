@@ -223,7 +223,8 @@ export default function ModulePane({ module, ...props }) {
         const dependencyCount = Object.keys(dependencies || []).length;
 
         // const fileTreeLink = module.npmLink + '/index';
-        const fileTreeLink = 'https://unpkg.com/:package@:version/:file';
+        const fileTreeLink = `https://unpkg.com/${module.name}@${module.version}/package-lock.json`;
+        console.log(fileTreeLink)
         searchPackageJsonField(fileTreeLink).then(hasPackageJson => {
           console.log(tempSmell['pinned-dependency'], dependencyCount)
           if (tempSmell['pinned-dependency'] === dependencyCount) { // 所有包的版本都已经锁定，所以不需要 package-lock.json
